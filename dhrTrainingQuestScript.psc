@@ -311,7 +311,7 @@ Function FinishCheckup()
     EndIf
   EndIf
 
-  RegisterForSingleUpdateGameTime(48)
+  RegisterForSingleUpdateGameTime(dhr.trainingCheckupWaitingTimeHours)
   internalStage = 6
 EndFunction
 
@@ -582,31 +582,23 @@ Bool Function ApplyTrial(Int trialId, dhrTrainingBeltScript belt)
   ElseIf trialId == 7 ; Decrease anal temperature by 20C
     analTemperature -= 20
   ElseIf trialId == 8 ; Edge 3 times
-    belt.edgingsLeft += 3
-    belt.UpdateStatusFlags()
+    belt.AddEdgingsLeft(3)
   ElseIf trialId == 9 ; Edge 5 times
-    belt.edgingsLeft += 5
-    belt.UpdateStatusFlags()
+    belt.AddEdgingsLeft(5)
   ElseIf trialId == 10 ; Edge 8 times
-    belt.edgingsLeft += 8
-    belt.UpdateStatusFlags()
+    belt.AddEdgingsLeft(8)
   ElseIf trialId == 11 ; Random shocks for 12 hours
-    belt.shockTimeLeftHours += 12
-    belt.UpdateStatusFlags()
+    belt.AddShockTimeLeft(12)
   ElseIf trialId == 12 ; Random shocks for 24 hours
-    belt.shockTimeLeftHours += 24
-    belt.UpdateStatusFlags()
+    belt.AddShockTimeLeft(24)
   ElseIf trialId == 13 ; Random shocks for 36 hours
-    belt.shockTimeLeftHours += 36
-    belt.UpdateStatusFlags()
+    belt.AddShockTimeLeft(36)
   ElseIf trialId == 14 ; Teasing vibration for 3 hours
-    belt.teasingVibrationTimeLeftHours += 3
-    belt.UpdateStatusFlags()
+    belt.AddTeasingVibrationsTimeLeft(3)
   ElseIf trialId == 15 ; Teasing vibration for 6 hours
-    belt.teasingVibrationTimeLeftHours += 6
-    belt.UpdateStatusFlags()
+    belt.AddTeasingVibrationsTimeLeft(6)
   ElseIf trialId == 16 ; Gag and blindfold
-    Return EquipPlayerWithRandomDevice(dhr.zadQuest.zad_DeviousGag, dhr.zadxQuest.zad_dev_gags) && EquipPlayerWithRandomDevice(dhr.zadQuest.zad_DeviousBlindfold, dhr.zadxQuest.zad_dev_blindfolds)
+    Return EquipPlayerWithRandomDevice(dhr.zadQuest.zad_DeviousGag, dhr.zadxQuest.zad_dev_gags) && EquipPlayerWithRandomDevice(dhr.zadQuest.zad_DeviousBlindfold, dhr.zadxQuest.zad_dev_blindfolds_leather)
   ElseIf trialId == 17 ; Armbinder
     Return EquipPlayerWithRandomDevice(dhr.zadQuest.zad_DeviousHeavyBondage, dhr.zadxQuest.zad_dev_armbinders_all)
   ElseIf trialId == 18 ; Yoke
@@ -616,32 +608,23 @@ Bool Function ApplyTrial(Int trialId, dhrTrainingBeltScript belt)
   ElseIf trialId == 20 ; Boots
     Return EquipPlayerWithRandomDevice(dhr.zadQuest.zad_DeviousBoots, dhr.zadxQuest.zad_dev_boots)
   ElseIf trialId == 21 ; Stamina drain for 12 hours
-    belt.staminaDrainTimeLeftHours += 12
-    belt.UpdateStatusFlags()
+    belt.AddStaminaDrainTimeLeft(12)
   ElseIf trialId == 22 ; Stamina drain for 24 hours
-    belt.staminaDrainTimeLeftHours += 24
-    belt.UpdateStatusFlags()
+    belt.AddStaminaDrainTimeLeft(24)
   ElseIf trialId == 23 ; Stamina drain for 36 hours
-    belt.staminaDrainTimeLeftHours += 36
-    belt.UpdateStatusFlags()
+    belt.AddStaminaDrainTimeLeft(36)
   ElseIf trialId == 24 ; Magicka drain for 6 hours
-    belt.magickaDrainTimeLeftHours += 6
-    belt.UpdateStatusFlags()
+    belt.AddMagickaDrainTimeLeft(6)
   ElseIf trialId == 25 ; Magicka drain for 12 hours
-    belt.magickaDrainTimeLeftHours += 12
-    belt.UpdateStatusFlags()
+    belt.AddMagickaDrainTimeLeft(12)
   ElseIf trialId == 26 ; Magicka drain for 18 hours
-    belt.magickaDrainTimeLeftHours += 18
-    belt.UpdateStatusFlags()
+    belt.AddMagickaDrainTimeLeft(18)
   ElseIf trialId == 27 ; Sleep deprivation for 36 hours
-    belt.sleepDeprivationLeftHours += 36
-    belt.UpdateStatusFlags()
+    belt.AddSleepDeprivationTimeLeft(36)
   ElseIf trialId == 28 ; Sleep deprivation for 48 hours
-    belt.sleepDeprivationLeftHours += 48
-    belt.UpdateStatusFlags()
+    belt.AddSleepDeprivationTimeLeft(48)
   ElseIf trialId == 29 ; Sleep deprivation for 60 hours
-    belt.sleepDeprivationLeftHours += 60
-    belt.UpdateStatusFlags()
+    belt.AddSleepDeprivationTimeLeft(60)
   ElseIf trialId == 30 ; Chastity bra
     Return EquipPlayerWithRandomDevice(dhr.zadQuest.zad_DeviousBra, dhr.zadxQuest.zad_dev_chastitybras)
   ElseIf trialId == 31 ; Nipple piercing

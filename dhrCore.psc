@@ -43,6 +43,9 @@ GlobalVariable Property dhr_msgShowEnableTortureMode Auto
 GlobalVariable Property dhr_msgShowTortureInProgress Auto
 GlobalVariable Property dhr_msgShowEdgingInProgress Auto
 
+; Other global variables
+GlobalVariable Property dhr_disableSkillLevelCap Auto
+
 
 ; Keywords
 Keyword Property dhr_heatingPlug Auto
@@ -72,7 +75,7 @@ dhrTrainingBeltScript Property currentTrainingBelt Auto
 Float Property bodyTemperature = 36.5 AutoReadOnly
 Float Property fastDeltaRatioPerTick = 0.6 AutoReadOnly
 Float Property fastDeltaClearThreshold = 4.0 AutoReadOnly
-String Property MOD_VERSION = "V1.0" AutoReadOnly
+String Property MOD_VERSION = "V1.1" AutoReadOnly
 Int Property MIGRATION_VERSION = 1 AutoReadOnly
 
 
@@ -81,6 +84,8 @@ dhrSkill Property dhr_analHeatResistanceSkill Auto
 dhrSkill Property dhr_analColdResistanceSkill Auto
 dhrSkill Property dhr_vaginalHeatResistanceSkill Auto
 dhrSkill Property dhr_vaginalColdResistanceSkill Auto
+dhrSkill Property dhr_vaginalShockResistanceSkill Auto
+dhrSkill Property dhr_analShockResistanceSkill Auto
 
 
 ; Devices
@@ -123,6 +128,9 @@ Float Property staminaDrainReservationRatio = 0.1 Auto
 Float Property expGainingThreshold = 10.0 Auto
 Float Property expGainingMultiplier = 1.0 Auto
 
+Float Property resistancePercentagePerSkillLevel = 1.0 Auto
+Float Property maxResistancePercentagePerOrifice = 40.0 Auto
+
 Bool Property vibrationSoundVolumeUseDD = True Auto
 Float Property vibrationSoundVolumeOverride = 1.0 Auto
 Bool Property moanSoundVolumeUseDD = True Auto
@@ -149,12 +157,17 @@ Float Property trainingEdgingVibrationIntensityMax = 1.0 Auto
 Float Property trainingTeasingVibrationIntensityMin = 0.15 Auto
 Float Property trainingTeasingVibrationIntensityMax = 0.30 Auto
 
+Float Property trainingCheckupWaitingTimeHours = 48.0 Auto
+Float Property trainingTimedTrialMultiplier = 1.0 Auto
+
 Float Property trainingRandomVibrationProbability = 0.05 Auto
+Float Property trainingExpGainingMultiplier = 2.0 Auto
 
 Bool Property frostfallFreezingPreventPassOut = True Auto
 Float Property frostfallExposurePerTempDiffPerTick = 0.2 Auto
 
 Float Property initialShowNotificationCountdown = 100.0 Auto
+Bool Property removeLockedPlugsUponUnequipping = True Auto
 
 ; The following two properties are for dealing with the training quest.
 
@@ -237,7 +250,7 @@ Event OnSleepStart(Float afSleepStartTime, Float afDesiredSleepEndTime)
     Else
       ; Failed to start vibrations? It is ok, we can shock the player instead :D
       Debug.MessageBox("As soon as you closed your eyes, the soulgems let out an extremely powerful electric shock, waking you up completely.")
-      ShockPlayer(40, True)
+      ShockPlayer(40, respectHpDrainReservationRatio = True, vaginalShock = True, analShock = True)
     EndIf
     ; Interrupt sleep.
     zadQuest.PlayerRef.MoveTo(zadQuest.PlayerRef)
@@ -261,8 +274,8 @@ EndEvent
 
 ; Drains the actor value to current - amount
 Function DrainActorValueBy(Actor player, String actorValueName, Float amount, Float reservationRatio)
-  Float maxValue = player.GetActorValueMax(actorValueName)
   Float currentValue = player.GetActorValue(actorValueName)
+  Float maxValue = currentValue / player.GetActorValuePercentage(actorValueName)
   Float shouldBe = currentValue - amount
   If shouldBe < maxValue * reservationRatio
     ; If lower than reserved value, bump the value up
@@ -277,8 +290,8 @@ EndFunction
 
 ; Drains the actor value to maxValue - amount
 Function DrainActorValueToBy(Actor player, String actorValueName, Float amount, Float reservationRatio)
-  Float maxValue = player.GetActorValueMax(actorValueName)
   Float currentValue = player.GetActorValue(actorValueName)
+  Float maxValue = currentValue / player.GetActorValuePercentage(actorValueName)
   Float shouldBe = maxValue - amount
   If shouldBe < maxValue * reservationRatio
     ; If lower than reserved value, bump the value up
@@ -388,9 +401,20 @@ Float Function MapPlugTemperature(Float actualTemperature, Bool isVaginal)
   Return temperature
 EndFunction
 
-Function ShockPlayer(Float amount, Bool respectHpDrainReservationRatio)
+Function ShockPlayer(Float amount, Bool respectHpDrainReservationRatio, Bool vaginalShock, Bool analShock)
   Actor player = zadQuest.PlayerRef
-  If amount < 20
+  If vaginalShock && analShock
+    amount -= (dhr_vaginalShockResistanceSkill.level + dhr_analShockResistanceSkill.level) / 2
+  ElseIf vaginalShock
+    amount -= dhr_vaginalShockResistanceSkill.level
+  ElseIf analShock
+    amount -= dhr_analShockResistanceSkill.level
+  EndIf
+  If amount < 0
+    Debug.Notification("The plugs within you let out a weak electrical shock!")
+    Debug.Notification("Your shock resistance skills have completed neutralized the damage.")
+    amount = 0
+  ElseIf amount < 20
     Debug.Notification("The plugs within you let out a painful electrical shock!")
   ElseIf amount < 40
     Debug.Notification("The plugs within you let out a very painful electrical shock!")
@@ -398,7 +422,7 @@ Function ShockPlayer(Float amount, Bool respectHpDrainReservationRatio)
     Debug.Notification("The plugs within you let out an extremely painful electrical shock!")
   EndIf
   ; Somehow this creates two threads and the two effects will run at the same time.
-  If shockCauseFallOver
+  If shockCauseFallOver && amount > 0
     SendModEvent("dhr_shockPlayerEffect_1") ; Trip the player
   EndIf
   SendModEvent("dhr_shockPlayerEffect_2") ; Shock effect
@@ -406,6 +430,15 @@ Function ShockPlayer(Float amount, Bool respectHpDrainReservationRatio)
     DrainActorValueBy(player, "Health", amount, hpDrainReservationRatio)
   Else
     DrainActorValueBy(player, "Health", amount, 0.0)
+  EndIf
+  If vaginalShock && analShock
+    ; Split the experience
+    dhr_vaginalShockResistanceSkill.AddExp(amount / 20)
+    dhr_analShockResistanceSkill.AddExp(amount / 20)
+  ElseIf vaginalShock
+    dhr_vaginalShockResistanceSkill.AddExp(amount / 10)
+  ElseIf analShock
+    dhr_analShockResistanceSkill.AddExp(amount / 10)
   EndIf
 EndFunction
 

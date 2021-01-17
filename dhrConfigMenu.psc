@@ -84,9 +84,11 @@ Event OnPageReset(String currentPage)
     EndIf
   ElseIf currentPage == "Skills"
     dhr.dhr_vaginalHeatResistanceSkill.MCMReset(self)
-    dhr.dhr_vaginalColdResistanceSkill.MCMReset(self)
     dhr.dhr_analHeatResistanceSkill.MCMReset(self)
+    dhr.dhr_vaginalColdResistanceSkill.MCMReset(self)
     dhr.dhr_analColdResistanceSkill.MCMReset(self)
+    dhr.dhr_vaginalShockResistanceSkill.MCMReset(self)
+    dhr.dhr_analShockResistanceSkill.MCMReset(self)
   ElseIf currentPage == "Training Quest"
     AddHeaderOption("General")
     AddEmptyOption()
@@ -138,7 +140,9 @@ Event OnPageReset(String currentPage)
     AddTemperatureOptionST("OptionExpGainingThreshold", False, "EXP gaining threshold", dhr.expGainingThreshold)
     AddSliderOptionST("OptionExpGainingMultiplier", "EXP gaining multiplier", dhr.expGainingMultiplier, "x{1}")
     AddTemperatureOptionST("OptionSkillEffectiveness", False, "Skill effectiveness", dhr.skillEffectiveness)
-    AddEmptyOption()
+    AddToggleOptionST("OptionDisableSkillLevelCap", "Disable level cap", dhr.dhr_disableSkillLevelCap.GetValueInt())
+    AddSliderOptionST("OptionResistancePercentagePerSkillLevel", "Resistance % per level", dhr.resistancePercentagePerSkillLevel, "{1}%")
+    AddSliderOptionST("OptionMaxResistancePercentagePerOrifice", "Max resistance % per orifice", dhr.maxResistancePercentagePerOrifice, "{1}%")
 
     AddHeaderOption("Volume")
     AddEmptyOption()
@@ -157,6 +161,10 @@ Event OnPageReset(String currentPage)
 
     AddHeaderOption("Training Quest")
     AddEmptyOption()
+
+    AddSliderOptionST("OptionTrainingCheckupWaitingTime", "Checkup waiting time", dhr.trainingCheckupWaitingTimeHours, "{1} hours")
+    AddSliderOptionST("OptionTimedTrialMultiplier", "Timed trial multiplier", dhr.trainingTimedTrialMultiplier, "x{1}")
+
     AddTemperatureOptionST("OptionTrainingBaseTemperatureDiff", False, "Base temperature difference", dhr.trainingBaseTemperatureDiff)
     AddTemperatureOptionST("OptionTrainingStressTemperatureAdditionalDiff", False, "Stress additional temperature difference", dhr.trainingStressTemperatureAdditionalDiff)
 
@@ -179,10 +187,14 @@ Event OnPageReset(String currentPage)
     AddSliderOptionST("OptionTrainingRandomVibrationProbability", "Random vibration probability", dhr.trainingRandomVibrationProbability, "{3}")
     AddEmptyOption()
 
+    AddSliderOptionST("OptionTrainingExpGainingMultiplier", "EXP gaining multiplier when training", dhr.trainingExpGainingMultiplier, "x{1}")
+    AddEmptyOption()
+
     AddHeaderOption("Miscellaneous")
     AddEmptyOption()
     AddSliderOptionST("OptionInitialShowNotificationCountdown", "Temperature notification countdown", dhr.initialShowNotificationCountdown, "{0}")
     AddToggleOptionST("OptionEnableDebugDialogue", "Enable debug dialogue", dhr_enableDebugDialogue.GetValueInt())
+    AddToggleOptionST("OptionRemoveLockedPlugsUponUnequipping", "Remove locked plugs upon unequipping", dhr.removeLockedPlugsUponUnequipping)
   ElseIf currentPage == "About"
     AddHeaderOption("Devious Heatrise")
     AddEmptyOption()
@@ -205,9 +217,11 @@ EndEvent
 
 Event OnOptionHighlight(Int option)
   dhr.dhr_vaginalHeatResistanceSkill.MCMOnHighlight(self, option)
-  dhr.dhr_vaginalColdResistanceSkill.MCMOnHighlight(self, option)
   dhr.dhr_analHeatResistanceSkill.MCMOnHighlight(self, option)
+  dhr.dhr_vaginalColdResistanceSkill.MCMOnHighlight(self, option)
   dhr.dhr_analColdResistanceSkill.MCMOnHighlight(self, option)
+  dhr.dhr_vaginalShockResistanceSkill.MCMOnHighlight(self, option)
+  dhr.dhr_analShockResistanceSkill.MCMOnHighlight(self, option)
   
   Int giftPlugId = trainingQuestGiftPlugIds.Find(option)
   If giftPlugId >= 0
@@ -266,9 +280,63 @@ State OptionEnableDebugDialogue
   EndEvent
 EndState
 
+State OptionRemoveLockedPlugsUponUnequipping
+  Event OnSelectST()
+    dhr.removeLockedPlugsUponUnequipping = !dhr.removeLockedPlugsUponUnequipping
+    SetToggleOptionValueST(dhr.removeLockedPlugsUponUnequipping)
+  EndEvent
+  Event OnDefaultST()
+    dhr.removeLockedPlugsUponUnequipping = True
+    SetToggleOptionValueST(True)
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("Whether to remove the plug when unequipping a plug that has not been unlocked (not gifted by Arcadia). It is not recommended to disable this unless you want to skip the entire training quest.")
+  EndEvent
+EndState
+
 
 
 ; Training Quest
+
+State OptionTrainingCheckupWaitingTime
+  Event OnSliderOpenST()
+    SetSliderDialogStartValue(dhr.trainingCheckupWaitingTimeHours)
+    SetSliderDialogDefaultValue(48)
+    SetSliderDialogRange(2, 100)
+    SetSliderDialogInterval(0.1)
+  EndEvent
+  Event OnSliderAcceptST(Float value)
+    dhr.trainingCheckupWaitingTimeHours = value
+    SetSliderOptionValueST(value, "{1} hours")
+  EndEvent
+  Event OnDefaultST()
+    dhr.trainingCheckupWaitingTimeHours = 48
+    SetSliderOptionValueST(48, "{1} hours")
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("Minimum number of hours to wait between two checkups. Changing this will not affect the timer that is already running. NOTE: Due to limitations of Skyrim, the dialogue with Arcadia will continue to say 48 hours even if this value is changed.")
+  EndEvent
+EndState
+
+State OptionTimedTrialMultiplier
+  Event OnSliderOpenST()
+    SetSliderDialogStartValue(dhr.trainingTimedTrialMultiplier)
+    SetSliderDialogDefaultValue(1)
+    SetSliderDialogRange(0.1, 5)
+    SetSliderDialogInterval(0.1)
+  EndEvent
+  Event OnSliderAcceptST(Float value)
+    dhr.trainingTimedTrialMultiplier = value
+    SetSliderOptionValueST(value, "x{1}")
+  EndEvent
+  Event OnDefaultST()
+    dhr.trainingTimedTrialMultiplier = 1
+    SetSliderOptionValueST(1, "x{1}")
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("The multiplier for the time of all timed trials (teasing vibrations, random shocks, sleep deprivation, etc.). NOTE: Due to limitations of Skyrim, the dialogue with Arcadia will not reflect this multiplier. For example if you set this to x0.5, and choose the trial \"teasing vibration for 6 hours\", in actuality, you will only be teased for 3 hours.")
+  EndEvent
+EndState
 
 State OptionTrainingBaseTemperatureDiff
   Event OnSliderOpenST()
@@ -534,6 +602,26 @@ State OptionTrainingRandomVibrationProbability
   EndEvent
 EndState
 
+State OptionTrainingExpGainingMultiplier
+  Event OnSliderOpenST()
+    SetSliderDialogStartValue(dhr.trainingExpGainingMultiplier)
+    SetSliderDialogDefaultValue(2)
+    SetSliderDialogRange(0, 5)
+    SetSliderDialogInterval(0.1)
+  EndEvent
+  Event OnSliderAcceptST(Float value)
+    dhr.trainingExpGainingMultiplier = value
+    SetSliderOptionValueST(value, "x{1}")
+  EndEvent
+  Event OnDefaultST()
+    dhr.trainingExpGainingMultiplier = 2
+    SetSliderOptionValueST(dhr.trainingExpGainingMultiplier, "x{1}")
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("Additional multiplicative multiplier for EXP gaining rate when using the training plugs. (For example, if you set the regular EXP gaining multiplier to 2 and this to 3, you will get 2x EXP when not training, but 6x EXP when using the training plugs.)")
+  EndEvent
+EndState
+
 ; Volume
 
 State OptionVibrationSoundVolumeUseDD
@@ -665,6 +753,96 @@ State OptionSkillEffectiveness
   EndEvent
   Event OnHighlightST()
     SetInfoText("How much does each level of temperature resistance skills shields.")
+  EndEvent
+EndState
+
+Function ReEnableSkillLevelCap()
+  If ShowMessage("You are about to re-enable skill level cap. If your current level is higher than what is allowed at current transcend level, your level might be lost. Are you sure you want to continue?")
+    dhr.dhr_disableSkillLevelCap.SetValueInt(0)
+  EndIf
+EndFunction
+
+Function UpdateSkillsReadyToTranscendIndicator()
+  dhr.dhr_analHeatResistanceSkill.UpdateState()
+  dhr.dhr_vaginalHeatResistanceSkill.UpdateState()
+  dhr.dhr_analColdResistanceSkill.UpdateState()
+  dhr.dhr_vaginalColdResistanceSkill.UpdateState()
+  dhr.dhr_analShockResistanceSkill.UpdateState()
+  dhr.dhr_vaginalShockResistanceSkill.UpdateState()
+EndFunction
+
+State OptionDisableSkillLevelCap
+  Event OnSelectST()
+    If dhr.dhr_disableSkillLevelCap.GetValueInt()
+      ReEnableSkillLevelCap()
+    Else
+      dhr.dhr_disableSkillLevelCap.SetValueInt(1)
+    EndIf
+    SetToggleOptionValueST(dhr.dhr_disableSkillLevelCap.GetValueInt())
+    UpdateSkillsReadyToTranscendIndicator()
+  EndEvent
+  Event OnDefaultST()
+    If dhr.dhr_disableSkillLevelCap.GetValueInt()
+      ReEnableSkillLevelCap()
+      SetToggleOptionValueST(False)
+      UpdateSkillsReadyToTranscendIndicator()
+    EndIf
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("Whether to disable level cap (which can be increased via transcending). Level cap is a way of making the mod more replayable within the same save file. It is not recommended to change this setting.")
+  EndEvent
+EndState
+
+Function UpdateSkillsSpells()
+  dhr.dhr_analHeatResistanceSkill.UpdateSpell()
+  dhr.dhr_vaginalHeatResistanceSkill.UpdateSpell()
+  dhr.dhr_analColdResistanceSkill.UpdateSpell()
+  dhr.dhr_vaginalColdResistanceSkill.UpdateSpell()
+  dhr.dhr_analShockResistanceSkill.UpdateSpell()
+  dhr.dhr_vaginalShockResistanceSkill.UpdateSpell()
+EndFunction
+
+State OptionResistancePercentagePerSkillLevel
+  Event OnSliderOpenST()
+    SetSliderDialogStartValue(dhr.resistancePercentagePerSkillLevel)
+    SetSliderDialogDefaultValue(1)
+    SetSliderDialogRange(0, 10)
+    SetSliderDialogInterval(0.1)
+  EndEvent
+  Event OnSliderAcceptST(Float value)
+    dhr.resistancePercentagePerSkillLevel = value
+    SetSliderOptionValueST(value, "{1}%")
+    UpdateSkillsSpells()
+  EndEvent
+  Event OnDefaultST()
+    dhr.resistancePercentagePerSkillLevel = 1
+    SetSliderOptionValueST(dhr.resistancePercentagePerSkillLevel, "{1}%")
+    UpdateSkillsSpells()
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("For each level of temperature/shock tolerance skill, how much elemental resistance (for combat) should the player character gain.")
+  EndEvent
+EndState
+
+State OptionMaxResistancePercentagePerOrifice
+  Event OnSliderOpenST()
+    SetSliderDialogStartValue(dhr.maxResistancePercentagePerOrifice)
+    SetSliderDialogDefaultValue(40)
+    SetSliderDialogRange(0, 100)
+    SetSliderDialogInterval(0.1)
+  EndEvent
+  Event OnSliderAcceptST(Float value)
+    dhr.maxResistancePercentagePerOrifice = value
+    SetSliderOptionValueST(value, "{1}%")
+    UpdateSkillsSpells()
+  EndEvent
+  Event OnDefaultST()
+    dhr.maxResistancePercentagePerOrifice = 40
+    SetSliderOptionValueST(dhr.maxResistancePercentagePerOrifice, "{1}%")
+    UpdateSkillsSpells()
+  EndEvent
+  Event OnHighlightST()
+    SetInfoText("How much elemental resistance (for combat) can a temperature/shock tolerance skill give for each orifice.")
   EndEvent
 EndState
 

@@ -44,6 +44,36 @@ Function UpdateStatusFlags()
   dhr.dhr_trainingQuest.beltHasTimerLeft = shockTimeLeftHours > 0 || teasingVibrationTimeLeftHours > 0 || staminaDrainTimeLeftHours > 0 || magickaDrainTimeLeftHours > 0 || sleepDeprivationLeftHours > 0
 EndFunction
 
+Function AddEdgingsLeft(Int amount)
+  edgingsLeft += amount
+  UpdateStatusFlags()
+EndFunction
+
+Function AddShockTimeLeft(Int timeHours)
+  shockTimeLeftHours += timeHours * dhr.trainingTimedTrialMultiplier
+  UpdateStatusFlags()
+EndFunction
+
+Function AddTeasingVibrationsTimeLeft(Int timeHours)
+  teasingVibrationTimeLeftHours += timeHours * dhr.trainingTimedTrialMultiplier
+  UpdateStatusFlags()
+EndFunction
+
+Function AddStaminaDrainTimeLeft(Int timeHours)
+  staminaDrainTimeLeftHours += timeHours * dhr.trainingTimedTrialMultiplier
+  UpdateStatusFlags()
+EndFunction
+
+Function AddMagickaDrainTimeLeft(Int timeHours)
+  magickaDrainTimeLeftHours += timeHours * dhr.trainingTimedTrialMultiplier
+  UpdateStatusFlags()
+EndFunction
+
+Function AddSleepDeprivationTimeLeft(Int timeHours)
+  sleepDeprivationLeftHours += timeHours * dhr.trainingTimedTrialMultiplier
+  UpdateStatusFlags()
+EndFunction
+
 Function CheckEdgeResult()
   If edgingSessionId != -1
     ; Edging in progress
@@ -242,7 +272,7 @@ Function Tick()
     If Utility.RandomFloat() < probability
       ; Shock
       hoursSinceLastShock = 0.0
-      dhr.ShockPlayer(Utility.RandomFloat(dhr.trainingRandomShockDamageMin, dhr.trainingRandomShockDamageMax), dhr.trainingRandomShockDamageRespectHpDrainReservationRatio)
+      dhr.ShockPlayer(Utility.RandomFloat(dhr.trainingRandomShockDamageMin, dhr.trainingRandomShockDamageMax), respectHpDrainReservationRatio = dhr.trainingRandomShockDamageRespectHpDrainReservationRatio, vaginalShock = True, analShock = True)
     EndIf
     shockTimeLeftHours = Max(0, shockTimeLeftHours - timePassed)
   EndIf

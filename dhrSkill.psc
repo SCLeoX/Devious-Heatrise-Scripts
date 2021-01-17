@@ -4,6 +4,7 @@ Scriptname dhrSkill extends Quest
 String Property skillName Auto
 String Property skillDescription Auto
 Quest Property dhr_transcendSkillQuest Auto
+dhrCore Property dhr_core Auto
 Int Property transcendSkillQuestObjectiveId Auto
 GlobalVariable Property readyToTranscendIndicator Auto
 Spell Property effectSpell Auto
@@ -14,8 +15,12 @@ Int Property transcendLevel = 0 Auto
 Float Property exp = 0.0 Auto
 Float Property expMax = 50.0 Auto
 
+Bool Function LevelCapEnabled()
+  Return !dhr_core.dhr_disableSkillLevelCap.GetValueInt()
+EndFunction
+
 Function UpdateReadyToTranscendIndicator()
-  If level >= levelMax
+  If LevelCapEnabled() && level >= levelMax
     readyToTranscendIndicator.SetValueInt(1)
     If !dhr_transcendSkillQuest.IsRunning()
       dhr_transcendSkillQuest.SetStage(10)
@@ -60,9 +65,9 @@ Function UpdateSpell()
     player.RemoveSpell(effectSpell)
   EndIf
   If level != 0
-    Float magnitude = level
-    If magnitude > 40
-      magnitude = 40
+    Float magnitude = level * dhr_core.resistancePercentagePerSkillLevel
+    If magnitude > dhr_core.maxResistancePercentagePerOrifice
+      magnitude = dhr_core.maxResistancePercentagePerOrifice
     EndIf
     If player.HasSpell(effectSpell)
       player.RemoveSpell(effectSpell)
@@ -72,18 +77,26 @@ Function UpdateSpell()
   EndIf
 EndFunction
 
+Function UpdateState()
+  AddExp(0)
+EndFunction
+
 Function AddExp(Float amount)
-  If level < levelMax
+  amount *= dhr_core.expGainingMultiplier
+  If dhr_core.dhr_trainingQuest.internalStage != 0 ; Training in progress
+    amount *= dhr_core.trainingExpGainingMultiplier
+  EndIf
+  If !LevelCapEnabled() || level < levelMax
     exp += amount
     Int leveledUp = 0
-    While exp >= expMax && level < levelMax
+    While exp >= expMax && (!LevelCapEnabled() || level < levelMax)
       exp -= expMax
       level += 1
       leveledUp += 1
       UpdateExpMax()
     EndWhile
     If leveledUp > 0
-      If level >= levelMax
+      If LevelCapEnabled() && level >= levelMax
         Debug.Notification("You have maxed out your " + skillName + " level.")
       ElseIf leveledUp == 1
         Debug.Notification("Your " + skillName + " level has increased. (Now: " + (level as String) + ")")
@@ -102,8 +115,12 @@ Function MCMReset(SKI_ConfigBase config)
   config.SetCursorFillMode(1)
   config.AddHeaderOption("Skill: " + skillName)
   mcmInformationTextId = config.AddTextOption("", "Hover for information")
-  config.AddTextOption("Level ", (level as int) + "/" + (levelMax as int), 1)
-  If Level >= levelMax
+  If LevelCapEnabled()
+    config.AddTextOption("Level ", (level as int) + "/" + (levelMax as int), 1)
+  Else
+    config.AddTextOption("Level ", level as int, 1)
+  EndIf
+  If LevelCapEnabled() && Level >= levelMax
     config.AddTextOption("Experience ", "MAX", 1)
   Else
     config.AddTextOption("Experience ", (exp as int) + "/" + (expMax as int), 1)
@@ -115,9 +132,10 @@ EndIf
 EndFunction
 
 Function Transcend()
+  dhrCore.SoftAssert(LevelCapEnabled(), "Shouldn't transcend when level cap is disabled.")
   If level >= levelMax
     level = 0
-    levelMax += 10
+    levelMax += 5
     exp = 0
     UpdateExpMax()
     transcendLevel += 1

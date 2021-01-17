@@ -490,7 +490,7 @@ EndFunction
 Function OnRemoveDevice(Actor akActor)
   Int giftPlugId = dhr.dhr_plugGiftList.Find(deviceInventory)
   ; Remove the item if this plug has not been gifted
-  If giftPlugId >= 0 && !dhr.plugGifted[giftPlugId]
+  If dhr.removeLockedPlugsUponUnequipping && giftPlugId >= 0 && !dhr.plugGifted[giftPlugId]
     akActor.RemoveItem(deviceInventory, 1, True)
   EndIf
   If akActor != dhr.zadQuest.PlayerRef
